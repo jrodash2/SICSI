@@ -4,33 +4,42 @@
 
 La aplicación exige Python/Django y PostgreSQL. Antes de contratar o usar un plan existente, confirma soporte Python/WSGI y disponibilidad o conexión saliente a PostgreSQL. No se afirma que Namecheap Stellar Plus ofrezca PostgreSQL. Si solo ofrece MariaDB, se necesita una base PostgreSQL externa autorizada o un alojamiento compatible. No se cambia automáticamente de motor.
 
-En un servidor compatible usa un entorno virtual, instala requirements-lock.txt, configura secretos mediante variables del servicio o .env privado, ejecuta migrate y collectstatic, y publica config.wsgi:application mediante el servidor WSGI del proveedor. Un VPS puede usar Gunicorn como dependencia específica de despliegue, instalada y versionada según ese entorno. No uses runserver en producción.
+En un servidor compatible usa un entorno virtual, instala requirements-lock.txt, crea un config/settings.py privado a partir de settings_example.py y completa los valores directamente, ejecuta migrate y collectstatic, y publica config.wsgi:application mediante el servidor WSGI del proveedor. Un VPS puede usar Gunicorn como dependencia específica de despliegue, instalada y versionada según ese entorno. No uses runserver en producción.
 
-## Variables esenciales
+## Ajustes esenciales en `config/settings.py`
 
-```dotenv
-DEBUG=False
-SECRET_KEY=CLAVE_ALEATORIA_PRIVADA_DE_AL_MENOS_40_CARACTERES
-ALLOWED_HOSTS=sicsi.TU_DOMINIO
-APP_URL=https://sicsi.TU_DOMINIO
-CSRF_TRUSTED_ORIGINS=https://sicsi.TU_DOMINIO
-DB_NAME=BASE_REAL
-DB_USER=USUARIO_REAL
-DB_PASSWORD=SECRETO_REAL
-DB_HOST=HOST_POSTGRESQL
-DB_PORT=5432
-DB_SSLMODE=verify-full
-PRIVATE_MEDIA_ROOT=/RUTA_PRIVADA/sicsi-documentos
-BACKUP_DIR=/RUTA_PRIVADA/sicsi-respaldos
-TRUST_PROXY_HTTPS=False
-EMAIL_MODE=smtp
+El archivo real está excluido de Git. Créalo una vez y guárdalo con permisos privados; no se utiliza .env. Ejemplo sin secretos reales:
+
+```python
+DEBUG = False
+SECRET_KEY = "CLAVE_ALEATORIA_PRIVADA_DE_AL_MENOS_40_CARACTERES"
+ALLOWED_HOSTS = ["sicsi.TU_DOMINIO"]
+APP_URL = "https://sicsi.TU_DOMINIO"
+CSRF_TRUSTED_ORIGINS = ["https://sicsi.TU_DOMINIO"]
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "sicsi",
+        "USER": "USUARIO_REAL",
+        "PASSWORD": "SECRETO_REAL",
+        "HOST": "HOST_POSTGRESQL",
+        "PORT": "5432",
+        "CONN_MAX_AGE": 60,
+        "OPTIONS": {"sslmode": "verify-full"},
+    }
+}
+PRIVATE_MEDIA_ROOT = Path("/RUTA_PRIVADA/sicsi-documentos")
+MEDIA_ROOT = PRIVATE_MEDIA_ROOT
+BACKUP_DIR = Path("/RUTA_PRIVADA/sicsi-respaldos")
+TRUST_PROXY_HTTPS = False
+EMAIL_MODE = "smtp"
 ```
 
 verify-full requiere certificados confiables y nombre de host correcto. Instala la CA de PostgreSQL según el proveedor (psycopg/libpq admite PGSSLROOTCERT). Para una base por loopback en el mismo servidor, la política puede permitir prefer; verifica la política institucional. No desactives verificación de TLS en conexiones remotas por conveniencia.
 
-Activa TRUST_PROXY_HTTPS=True únicamente si un proxy confiable elimina/reemplaza X-Forwarded-Proto y es el único que puede acceder al proceso. DEBUG=False exige cookies seguras y redirige a HTTPS. Usa un certificado válido antes de habilitar acceso. SESSION_SECRET no existe en esta versión: Django utiliza SECRET_KEY y sesiones en PostgreSQL. Mantén estable esa clave y rótala con planificación.
+Activa TRUST_PROXY_HTTPS = True únicamente si un proxy confiable elimina/reemplaza X-Forwarded-Proto y es el único que puede acceder al proceso. DEBUG = False exige cookies seguras y redirige a HTTPS. Usa un certificado válido antes de habilitar acceso. SESSION_SECRET no existe en esta versión: Django utiliza SECRET_KEY y sesiones en PostgreSQL. Mantén estable esa clave y rótala con planificación.
 
-Sirve solo STATIC_ROOT mediante el servidor web después de collectstatic. No sirvas MEDIA_ROOT, PRIVATE_MEDIA_ROOT, .env, respaldos ni el directorio completo del proyecto. Los PDF pasan por la vista autenticada de Django. Ajusta también el límite de carga del proxy.
+Sirve solo STATIC_ROOT mediante el servidor web después de collectstatic. No sirvas MEDIA_ROOT, PRIVATE_MEDIA_ROOT, settings.py, respaldos ni el directorio completo del proyecto. Los PDF pasan por la vista autenticada de Django. Ajusta también el límite de carga del proxy.
 
 ```bash
 python manage.py migrate
@@ -42,18 +51,20 @@ El comando check --deploy puede advertir que HSTS no incluye subdominios ni prel
 
 ## SMTP
 
-```dotenv
-EMAIL_MODE=smtp
-SMTP_HOST=HOST_SMTP
-SMTP_PORT=587
-SMTP_USER=CUENTA_SMTP
-SMTP_PASSWORD=SECRETO_SMTP
-SMTP_USE_TLS=True
-SMTP_USE_SSL=False
-SMTP_FROM=notificaciones@TU_DOMINIO
+En el mismo `config/settings.py`:
+
+```python
+EMAIL_MODE = "smtp"
+EMAIL_HOST = "HOST_SMTP"
+EMAIL_PORT = 587
+EMAIL_HOST_USER = "CUENTA_SMTP"
+EMAIL_HOST_PASSWORD = "SECRETO_SMTP"
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
+DEFAULT_FROM_EMAIL = "notificaciones@TU_DOMINIO"
 ```
 
-Para puerto 465 usa SMTP_USE_SSL=True y SMTP_USE_TLS=False. No actives los dos. TLS se verifica mediante los valores por defecto seguros de Python. Ajusta SPF/DKIM/DMARC con el proveedor.
+Para puerto 465 usa EMAIL_USE_SSL = True y EMAIL_USE_TLS = False. No actives los dos. TLS se verifica mediante los valores por defecto seguros de Python. Ajusta SPF/DKIM/DMARC con el proveedor.
 
 Prueba con un servicio de prueba con menos de 45 días y Notificar urgencia. Comprueba bandeja y registros SMTP. La respuesta DATA queda registrada junto con fecha, tipo, destinatario, servicio y ciclo. Un 250 significa aceptación del proveedor, no entrega final.
 
@@ -77,7 +88,7 @@ python manage.py enviar_alertas --solo-revisar
 
 Los umbrales son exactos: si Cron falta un día, no hay envío retroactivo. Monitoriza la ejecución. La reserva persistente y la clave única evitan duplicados aun si dos tareas corren al mismo tiempo. No existe garantía de exactamente una entrega en SMTP ante una caída después de la aceptación; por eso resultados inciertos no se reintentan solos.
 
-Para probar la programación en Windows usa el Programador de tareas: programa `.venv\Scripts\python.exe`, argumentos `manage.py enviar_alertas` e Iniciar en = carpeta absoluta SICSI. La máquina y PostgreSQL deben estar encendidos. Si EMAIL_MODE=console, el mensaje es simulado; configura salida y monitoreo de la tarea.
+Para probar la programación en Windows usa el Programador de tareas: programa `.venv\Scripts\python.exe`, argumentos `manage.py enviar_alertas` e Iniciar en = carpeta absoluta SICSI. La máquina y PostgreSQL deben estar encendidos. Si EMAIL_MODE = "console", el mensaje es simulado; configura salida y monitoreo de la tarea.
 
 Programa también limpieza de sesiones expiradas:
 
@@ -111,4 +122,4 @@ El comando solicita la contraseña. Detén escrituras al preparar una restauraci
 
 ## Actualizaciones
 
-Respalda primero. Detén el servicio o usa el mecanismo de mantenimiento del proveedor; git pull, instalación del lock, migrate, collectstatic y check --deploy. Ejecuta pruebas en una base de desarrollo, nunca con credenciales de producción. Reinicia y verifica acceso, dashboard y un PDF. No edites migraciones ya aplicadas ni borres tablas para resolver conflictos.
+Respalda primero. Detén el servicio o usa el mecanismo de mantenimiento del proveedor; git pull (conservando tu settings.py privado), instalación del lock, migrate, collectstatic y check --deploy. Ejecuta pruebas en una base de desarrollo, nunca con credenciales de producción. Reinicia y verifica acceso, dashboard y un PDF. No edites migraciones ya aplicadas ni borres tablas para resolver conflictos.

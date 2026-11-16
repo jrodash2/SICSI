@@ -21,3 +21,6 @@ staticfiles/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Configuración Django privada (copiar desde settings_example.py)
+config/settings.py

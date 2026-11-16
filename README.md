@@ -44,33 +44,48 @@ Luego ejecuta **por separado**, con autocommit habilitado:
 CREATE DATABASE sicsi OWNER sicsi ENCODING 'UTF8';
 ```
 
-No ejecutes CREATE DATABASE dentro de una transacción. Puedes usar otra base/usuario si ajustas `.env`; se recomienda una base exclusiva para SICSI. No utilices la cuenta `postgres` como cuenta de la aplicación.
+No ejecutes CREATE DATABASE dentro de una transacción. Puedes usar otra base/usuario si ajustas `config/settings.py`; se recomienda una base exclusiva para SICSI. No utilices la cuenta `postgres` como cuenta de la aplicación.
 
-### 4. Configurar `.env`
+### 4. Configurar `settings.py`
+
+La configuración se escribe directamente en Python, como en un proyecto Django tradicional. No se utiliza `.env` ni se leen variables de entorno para la conexión.
+
+La plantilla pública es `config/settings_example.py`. Tu configuración real se llama `config/settings.py` y está excluida de Git para proteger las contraseñas.
+
+En la primera instalación:
 
 ```powershell
-Copy-Item .env.example .env
+Copy-Item config\settings_example.py config\settings.py
 .\.venv\Scripts\python.exe -c "import secrets; print(secrets.token_urlsafe(48))"
-notepad .env
+notepad config\settings.py
 ```
 
-Copia la clave aleatoria generada a SECRET_KEY. Completa los valores:
+Copia la clave aleatoria generada en `SECRET_KEY`, entre comillas. Completa `DATABASES` en el mismo archivo:
 
-```dotenv
-SECRET_KEY=PEGA_LA_CLAVE_ALEATORIA_GENERADA
-DEBUG=True
-ALLOWED_HOSTS=127.0.0.1,localhost
-DB_NAME=sicsi
-DB_USER=sicsi
-DB_PASSWORD=LA_CLAVE_QUE_ELEGISTE_EN_POSTGRESQL
-DB_HOST=127.0.0.1
-DB_PORT=5432
-DB_SSLMODE=prefer
-APP_URL=http://127.0.0.1:8000
-EMAIL_MODE=console
+```python
+SECRET_KEY = "PEGA_AQUI_LA_CLAVE_ALEATORIA_GENERADA"
+DEBUG = True
+ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
+
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "sicsi",
+        "USER": "sicsi",
+        "PASSWORD": "ESCRIBE_AQUI_TU_CONTRASEÑA_LOCAL",
+        "HOST": "127.0.0.1",
+        "PORT": "5432",
+        "CONN_MAX_AGE": 60,
+        "OPTIONS": {"sslmode": "prefer"},
+    }
+}
 ```
 
-Conserva también las otras variables de la plantilla. Si PostgreSQL usa otro puerto, cambia DB_PORT. No publiques `.env`, claves ni respaldos; `.gitignore` los excluye. Si una clave contiene `#` o espacios, usa el formato de comillas admitido por python-dotenv. No compartas capturas del archivo completo.
+`NAME` es el nombre de la base. `USER` debe coincidir con el rol de PostgreSQL que creaste; no es el usuario administrador de SICSI. Si tu cuenta local tiene otro nombre, cambia USER. PASSWORD debe coincidir con la clave de ese rol. Una contraseña con `#` funciona dentro de una cadena entre comillas; no la dejes fuera de las comillas.
+
+Conserva el resto de los ajustes de la plantilla. Si PostgreSQL usa otro puerto, cambia PORT. `EMAIL_MODE = "console"` permite probar sin SMTP. No publiques tu `settings.py`, claves ni respaldos; comprueba que no aparezca en `git status` después de la actualización. No añadas este archivo usando `git add -f`.
+
+**Si venías de la versión con `.env`:** respalda primero cualquier cambio local de configuración y actualiza con `git pull origin main`. La nueva versión retira del seguimiento `config/settings.py`; vuelve a crearlo copiando la plantilla y completa la conexión y SECRET_KEY. Ya no necesita `.env`. Este cambio no elimina ni renombra tablas ni datos de PostgreSQL. En actualizaciones posteriores, tu settings.py privado permanece intacto: compara la plantilla si se anuncian ajustes nuevos, sin copiarla encima de tus secretos.
 
 ### 5. Crear las tablas y el administrador
 

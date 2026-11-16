@@ -16,7 +16,7 @@ python manage.py makemigrations --check --dry-run
 python manage.py test
 ```
 
-Las pruebas crean una base temporal y requieren permiso CREATEDB para la cuenta de desarrollo. El flujo GitHub Actions ejecuta la suite con un PostgreSQL efímero y credenciales exclusivamente de CI.
+Las pruebas crean una base temporal y requieren permiso CREATEDB para la cuenta de desarrollo. El flujo GitHub Actions genera su propio settings.py privado desde la plantilla y ejecuta la suite con PostgreSQL efímero y credenciales exclusivamente de CI.
 
 ## Límites
 

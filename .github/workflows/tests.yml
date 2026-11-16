@@ -17,16 +17,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-    env:
-      SECRET_KEY: clave-sintetica-exclusiva-de-pruebas-ci-no-usar-en-produccion-2026
-      DEBUG: "True"
-      ALLOWED_HOSTS: localhost,127.0.0.1,testserver
-      DB_NAME: sicsi
-      DB_USER: sicsi
-      DB_PASSWORD: ci-test-only
-      DB_HOST: 127.0.0.1
-      DB_PORT: "5432"
-      EMAIL_MODE: console
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -35,6 +25,17 @@ jobs:
           cache: pip
           cache-dependency-path: requirements-lock.txt
       - run: python -m pip install -r requirements-lock.txt
+      - name: Preparar settings.py privado para pruebas
+        shell: bash
+        run: |
+          python - <<'PYCODE'
+          from pathlib import Path
+          import secrets
+          source = Path("config/settings_example.py").read_text()
+          source = source.replace('SECRET_KEY = ""', 'SECRET_KEY = ' + repr(secrets.token_urlsafe(48)))
+          source = source.replace('"PASSWORD": ""', '"PASSWORD": "ci-test-only"')
+          Path("config/settings.py").write_text(source)
+          PYCODE
       - run: python manage.py check
       - run: python manage.py makemigrations --check --dry-run
       - run: python manage.py test

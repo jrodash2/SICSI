@@ -22,7 +22,7 @@ class BackendSMTP(EmailBackend):
 
 def entregar(asunto, texto, destinatario):
     if settings.EMAIL_MODE == "smtp" and (not settings.EMAIL_HOST or not settings.DEFAULT_FROM_EMAIL):
-        raise ValueError("Configure SMTP_HOST y SMTP_FROM antes de enviar alertas.")
+        raise ValueError("Configure EMAIL_HOST y DEFAULT_FROM_EMAIL en settings.py antes de enviar alertas.")
     backend = BackendSMTP() if settings.EMAIL_MODE == "smtp" else get_connection()
     backend.open()
     try:
