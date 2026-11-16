@@ -30,7 +30,7 @@ Ejecuta ` .\.venv\Scripts\python.exe manage.py migrate` desde el proyecto. No bo
 
 ## Ya existe un administrador
 
-No repitas createsuperuser. Inicia sesión con la cuenta creada. Para recuperación local autorizada puedes usar ` .\.venv\Scripts\python.exe manage.py changepassword NOMBRE_USUARIO`; se solicita una contraseña nueva y se invalidan las sesiones anteriores. El comando de recuperación no registra la contraseña en auditoría.
+No repitas el alta inicial. Las cuentas adicionales se crean desde Usuarios por un administrador. Inicia sesión con la cuenta creada. Para recuperación local autorizada puedes usar ` .\.venv\Scripts\python.exe manage.py restablecer_clave NOMBRE_USUARIO`; se solicita una contraseña nueva y se invalidan las sesiones anteriores. El comando de recuperación no registra la contraseña en auditoría.
 
 ## Error al ejecutar pruebas: permission denied to create database
 

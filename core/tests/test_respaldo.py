@@ -5,9 +5,9 @@ from unittest.mock import patch
 from io import StringIO
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.test import SimpleTestCase, override_settings
+from django.test import TestCase, override_settings
 
-class RespaldoTests(SimpleTestCase):
+class RespaldoTests(TestCase):
     def test_secreto_no_va_en_argumentos_y_temporal_se_elimina(self):
         password_file = None
         with tempfile.TemporaryDirectory() as root, override_settings(BACKUP_DIR=Path(root)):

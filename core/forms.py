@@ -2,7 +2,7 @@ from django import forms
 from django.conf import settings
 from django.contrib.auth.forms import AuthenticationForm
 from django.core.exceptions import ValidationError
-from .models import DestinatarioAlerta, Documento, Gestion, Servicio
+from .models import DestinatarioAlerta, Documento, Gestion, Servicio, Usuario
 
 class EstiloFormulario:
     def estilizar(self):
@@ -18,7 +18,7 @@ class EstiloFormulario:
 class AccesoForm(EstiloFormulario, AuthenticationForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["username"].label = "Usuario administrador"
+        self.fields["username"].label = "Nombre de usuario"
         self.estilizar()
 
 class ServicioForm(EstiloFormulario, forms.ModelForm):
@@ -31,6 +31,16 @@ class ServicioForm(EstiloFormulario, forms.ModelForm):
         if self.instance.pk:
             self.initial["version"] = self.instance.version
         self.estilizar()
+
+    @property
+    def secciones(self):
+        grupos = [
+            ("1. Identificación del servicio", "Registre el código, nombre y clasificación que utilizará en el inventario.", ["codigo", "nombre", "categoria", "descripcion", "estado"]),
+            ("2. Proveedor y contacto", "Datos para realizar consultas y dar seguimiento al proveedor.", ["proveedor", "contacto_nombre", "contacto_telefono", "contacto_correo"]),
+            ("3. Contratación y vigencia", "Deje vacíos los datos que no estén confirmados en la documentación.", ["capacidad", "contrato", "fecha_inicio", "fecha_vencimiento", "periodicidad", "monto", "moneda"]),
+            ("4. Trámite y validación", "El cambio de estado se registra con su usuario. Marque las fechas que deban revisarse.", ["tramite", "observaciones", "requiere_validacion", "motivo_validacion"]),
+        ]
+        return [{"titulo": titulo, "descripcion": descripcion, "campos": [self[name] for name in names]} for titulo, descripcion, names in grupos]
 
 class GestionForm(EstiloFormulario, forms.ModelForm):
     class Meta:
@@ -112,3 +122,55 @@ class DestinatarioForm(EstiloFormulario, forms.ModelForm):
         if qs.exists():
             raise ValidationError("Este correo ya está registrado. Edítelo o actívelo desde la lista.")
         return correo
+
+
+class UsuarioForm(EstiloFormulario, forms.ModelForm):
+    password1 = forms.CharField(label="Contraseña inicial", widget=forms.PasswordInput, required=False, max_length=128)
+    password2 = forms.CharField(label="Confirmar contraseña inicial", widget=forms.PasswordInput, required=False, max_length=128)
+    class Meta:
+        model = Usuario
+        fields = ["username", "first_name", "last_name", "email", "rol", "is_active"]
+        labels = {"username": "Nombre de usuario", "first_name": "Nombres", "last_name": "Apellidos", "email": "Correo institucional", "rol": "Perfil de acceso", "is_active": "Usuario activo"}
+        help_texts = {"username": "Se utiliza para iniciar sesión.", "rol": "Administrador: todos los módulos. Gestor: operación del inventario. Consulta: solo lectura."}
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk:
+            self.fields.pop("password1")
+            self.fields.pop("password2")
+        else:
+            self.fields["password1"].required = True
+            self.fields["password2"].required = True
+            self.fields["password1"].help_text = "Mínimo 14 caracteres. Se guardará protegida con Argon2."
+        self.estilizar()
+    def clean_username(self):
+        value = self.cleaned_data["username"].strip()
+        if Usuario.objects.filter(username__iexact=value).exclude(pk=self.instance.pk).exists():
+            raise ValidationError("Ese nombre de usuario ya existe.")
+        return value
+    def clean_email(self):
+        value = self.cleaned_data["email"].strip().casefold()
+        if Usuario.objects.filter(email__iexact=value).exclude(pk=self.instance.pk).exists():
+            raise ValidationError("Ese correo ya está registrado.")
+        return value
+    def clean(self):
+        data = super().clean()
+        if not self.instance.pk:
+            if data.get("password1") != data.get("password2"):
+                self.add_error("password2", "Las contraseñas no coinciden.")
+            if data.get("password1"):
+                from django.contrib.auth.password_validation import validate_password
+                candidate = Usuario(username=data.get("username", ""), email=data.get("email", ""), first_name=data.get("first_name", ""), last_name=data.get("last_name", ""))
+                try:
+                    validate_password(data["password1"], candidate)
+                except ValidationError as exc:
+                    self.add_error("password1", exc)
+        return data
+    def save(self, commit=True):
+        usuario = super().save(commit=False)
+        usuario.is_superuser = usuario.rol == Usuario.Rol.ADMINISTRADOR
+        usuario.is_staff = usuario.is_superuser
+        if self.cleaned_data.get("password1"):
+            usuario.set_password(self.cleaned_data["password1"])
+        if commit:
+            usuario.save()
+        return usuario

@@ -20,10 +20,10 @@ Con el entorno virtual activo:
 
 ```bash
 python manage.py importar_servicios /RUTA_PRIVADA/servicios.csv --inicial-12
-python manage.py importar_servicios /RUTA_PRIVADA/servicios.csv --inicial-12 --aplicar
+python manage.py importar_servicios /RUTA_PRIVADA/servicios.csv --inicial-12 --usuario TU_USUARIO --aplicar
 ```
 
-Primero simula, revisa y luego aplica. En Windows también puedes usar rutas entre comillas y llamar directamente al Python de `.venv`. --inicial-12 exige exactamente doce filas; omítelo para incorporaciones posteriores autorizadas.
+Primero simula, revisa y luego aplica. En --usuario indica la cuenta activa del Gestor o Administrador responsable para que conste en la auditoría. En Windows también puedes usar rutas entre comillas y llamar directamente al Python de `.venv`. --inicial-12 exige exactamente doce filas; omítelo para incorporaciones posteriores autorizadas.
 
 Se valida todo antes de escribir. La carga aplica una transacción completa, genera auditoría y rechaza códigos existentes, repetidos y columnas no admitidas. No hay sobrescrituras ni importación de PDF desde CSV; adjúntalos después por la interfaz.
 

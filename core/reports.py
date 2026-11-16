@@ -8,13 +8,13 @@ from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 
-CABECERAS = ["Código", "Servicio", "Categoría", "Proveedor", "Vencimiento", "Días", "Estado", "Trámite", "Validar fechas", "Última gestión", "Expediente", "Próximo seguimiento"]
+CABECERAS = ["Código", "Servicio", "Categoría", "Proveedor", "Vencimiento", "Días", "Estado", "Trámite", "Validar fechas", "Última gestión", "Expediente", "Próximo seguimiento", "Registrado por", "Última modificación por"]
 
 def filas(servicios):
     for s in servicios:
         gestiones = list(s.gestiones.all())
         ultima = gestiones[0] if gestiones else None
-        yield [s.codigo, s.nombre, s.categoria, s.proveedor, s.fecha_vencimiento.isoformat() if s.fecha_vencimiento else "", s.dias if s.dias is not None else "", s.estado, s.tramite, "Sí" if s.requiere_validacion else "No", ultima.descripcion if ultima else "", ultima.expediente if ultima else "", ultima.proximo_seguimiento.isoformat() if ultima and ultima.proximo_seguimiento else ""]
+        yield [s.codigo, s.nombre, s.categoria, s.proveedor, s.fecha_vencimiento.isoformat() if s.fecha_vencimiento else "", s.dias if s.dias is not None else "", s.estado, s.tramite, "Sí" if s.requiere_validacion else "No", ultima.descripcion if ultima else "", ultima.expediente if ultima else "", ultima.proximo_seguimiento.isoformat() if ultima and ultima.proximo_seguimiento else "", s.autor_creacion, s.autor_actualizacion]
 
 def generar_reporte(servicios, formato):
     buffer = BytesIO()

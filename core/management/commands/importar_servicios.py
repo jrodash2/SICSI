@@ -8,7 +8,10 @@ from core.services import auditar
 
 CAMPOS = list(ServicioForm.Meta.fields)
 
-class Command(BaseCommand):
+from core.management.actor_command import ComandoConUsuario
+
+class Command(ComandoConUsuario):
+    requiere_administrador = False
     help = "Valida un CSV de servicios. Solo escribe con --aplicar; nunca sobrescribe registros existentes."
     def add_arguments(self, parser):
         parser.add_argument("archivo", type=Path)

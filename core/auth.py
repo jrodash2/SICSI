@@ -9,7 +9,7 @@ VENTANA = timedelta(minutes=15)
 def claves(request):
     # REMOTE_ADDR es confiable; no se acepta X-Forwarded-For enviado por el cliente.
     ip = request.META.get("REMOTE_ADDR", "desconocida")
-    return [(salted_hmac("sicsi.login.ip", ip, algorithm="sha256").hexdigest(), 5), (salted_hmac("sicsi.login.cuenta", "administrador", algorithm="sha256").hexdigest(), 15)]
+    return [(salted_hmac("sicsi.login.ip", ip, algorithm="sha256").hexdigest(), 5), (salted_hmac("sicsi.login.cuenta", str(request.POST.get("username", "")).strip().casefold()[:150], algorithm="sha256").hexdigest(), 15)]
 
 def bloqueado(request):
     ahora = timezone.now()

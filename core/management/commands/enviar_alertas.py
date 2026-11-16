@@ -5,7 +5,10 @@ from django.utils import timezone
 from core.models import Servicio
 from core.services import procesar_alertas
 
-class Command(BaseCommand):
+from core.management.actor_command import ComandoConUsuario
+
+class Command(ComandoConUsuario):
+    origen_comando = "sistema"
     help = "Consulta los umbrales exactos de hoy y genera avisos sin depender de sesiones web."
     def add_arguments(self, parser):
         parser.add_argument("--solo-revisar", action="store_true", help="Muestra los candidatos sin reservar ni enviar avisos.")

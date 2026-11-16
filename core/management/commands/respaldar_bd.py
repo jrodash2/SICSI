@@ -6,7 +6,10 @@ from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
-class Command(BaseCommand):
+from core.management.actor_command import ComandoConUsuario
+
+class Command(ComandoConUsuario):
+    registrar_finalizacion = True
     help = "Crea un respaldo PostgreSQL privado con pg_dump (requiere el cliente instalado)."
     def handle(self, *args, **options):
         db = settings.DATABASES["default"]

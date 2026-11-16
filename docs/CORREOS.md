@@ -50,14 +50,14 @@ La clave real no se incluye en la plantilla, documentación ni historial Git. Pa
 
 En la barra lateral abre **Destinatarios** y selecciona **Añadir correo**. Registra nombre o área, correo y estado activo.
 
-- El administrador sigue incluido en todos los avisos, con el correo de su cuenta SICSI.
+- Los administradores activos siguen incluidos en todos los avisos, con el correo de sus cuentas SICSI.
 - Los contactos activos son destinatarios adicionales de todos los servicios y umbrales, incluida urgencia.
 - Los contactos inactivos no se añaden. Si registras el mismo correo del administrador, desactivar ese contacto no elimina la notificación obligatoria del administrador.
 - Un correo recibe un solo mensaje por aviso: se normaliza y no se duplica aunque coincida con el administrador o varíen sus mayúsculas.
 - Puedes editar, activar, desactivar y eliminar contactos. Estas acciones exigen sesión, POST/CSRF para cambios y dejan auditoría.
-- Los destinatarios son contactos, no cuentas de usuario: SICSI conserva su administrador único.
+- Los destinatarios son contactos, no cuentas de usuario: Las cuentas y perfiles se administran por separado en Usuarios.
 
-El remitente SMTP y los destinatarios cumplen funciones diferentes. La cuenta de Gmail envía; el administrador y los contactos activos reciben. El remitente no se añade automáticamente como destinatario si no coincide con el administrador o con un contacto activo.
+El remitente SMTP y los destinatarios cumplen funciones diferentes. La cuenta de Gmail envía; los administradores y los contactos activos reciben. El remitente no se añade automáticamente como destinatario si no coincide con el administrador o con un contacto activo.
 
 ## Probar sin generar alertas
 

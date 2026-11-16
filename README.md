@@ -2,7 +2,7 @@
 
 Sistema de Control de Servicios Informáticos en **Python, Django y PostgreSQL**. Interfaz en español con Bootstrap 5 local, sin herramientas Node.js ni compilación de frontend.
 
-Permite inventariar servicios, controlar vencimientos, conservar renovaciones, seguir gestiones, adjuntar PDF privados y generar reportes. Uso exclusivo de un administrador.
+Permite inventariar servicios, controlar vencimientos, conservar renovaciones, seguir gestiones, adjuntar PDF privados y generar reportes. Acceso del personal autorizado con perfiles de Administrador, Gestor y Consulta.
 
 ## Empezar en tu PC (Windows y PowerShell)
 
@@ -91,10 +91,10 @@ Conserva el resto de los ajustes de la plantilla. Si PostgreSQL usa otro puerto,
 
 ```powershell
 .\.venv\Scripts\python.exe manage.py migrate
-.\.venv\Scripts\python.exe manage.py createsuperuser
+.\.venv\Scripts\python.exe manage.py crear_administrador
 ```
 
-El comando solicitará usuario, correo y contraseña. Usa un correo válido: allí llegarán las alertas cuando actives SMTP. La contraseña debe tener al menos 14 caracteres. No se muestra al escribirla. SICSI solo permite una cuenta; no existe registro público ni panel para crear usuarios adicionales.
+El comando solicitará usuario, correo y contraseña. Usa un correo válido: allí llegarán las alertas cuando actives SMTP. La contraseña debe tener al menos 14 caracteres. No se muestra al escribirla. No existe registro público. Después de crear el administrador inicial, puedes agregar cuentas desde Usuarios y asignarles un perfil.
 
 ### 6. Levantar la aplicación
 
@@ -114,11 +114,12 @@ Comprueba que el servicio de PostgreSQL esté encendido. Desde la carpeta SICSI:
 .\.venv\Scripts\python.exe manage.py runserver
 ```
 
-No repitas `createsuperuser`. Cuando incorpores actualizaciones, ejecuta `git pull`, instala las dependencias bloqueadas si cambiaron y aplica `manage.py migrate`. Respalda antes los datos importantes.
+No repitas el alta del administrador inicial. Cuando incorpores actualizaciones, ejecuta `git pull`, instala las dependencias bloqueadas si cambiaron y aplica `manage.py migrate`. Respalda antes los datos importantes.
 
 ## Módulos incluidos
 
-- Acceso, cierre por POST, CSRF, límites de intentos persistentes y cambio de contraseña.
+- Usuarios con perfiles de Administrador, Gestor y Consulta; sesiones, CSRF, límites de intentos y cambio de contraseña.
+- Autor de creación y última modificación, responsables en gestiones/documentos e historial de acciones por usuario.
 - Vista de destinatarios adicionales, pruebas de correo y resultado SMTP individual por contacto.
 - Dashboard con ocho indicadores y próximos vencimientos.
 - CRUD de servicios con filtros y validación de fechas.
@@ -150,6 +151,7 @@ Las pruebas usan una base temporal `test_sicsi`. El usuario local necesita permi
 
 ## Documentación
 
+- [Usuarios, perfiles y registro de responsables](docs/USUARIOS.md).
 - [Uso y reglas del sistema](docs/USO.md).
 - [Importación CSV de servicios](docs/IMPORTACION.md).
 - [Cargar el DOCX completo con catálogo y accesos](docs/ACTAS.md).

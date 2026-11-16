@@ -7,7 +7,9 @@ from core.actas_parser import interpretar_fecha, leer_acta
 from core.models import ActaEntrega, ElementoActa, Servicio
 from core.services import auditar
 
-class Command(BaseCommand):
+from core.management.actor_command import ComandoConUsuario
+
+class Command(ComandoConUsuario):
     help = "Importa un acta DOCX privada completa, sin publicar ni descartar accesos o datos originales."
     def add_arguments(self, parser):
         parser.add_argument("archivo", type=Path)

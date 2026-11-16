@@ -5,10 +5,12 @@ from django.db import transaction
 from django.forms.models import model_to_dict
 from django.utils import timezone
 from .mail import entregar, respuesta_segura
+from .actor import nombre_usuario, origen_actual, usuario_actual
 from .models import Alerta, Auditoria, DestinatarioAlerta, EnvioAlerta, Gestion, Renovacion, Servicio, Tramite, Usuario
 
-def auditar(accion, entidad, registro_id=None, detalle=None):
-    return Auditoria.objects.create(accion=accion, entidad=entidad, registro_id=registro_id, detalle=detalle or {})
+def auditar(accion, entidad, registro_id=None, detalle=None, usuario=None):
+    actor = usuario if usuario is not None else usuario_actual()
+    return Auditoria.objects.create(accion=accion, entidad=entidad, registro_id=registro_id, detalle=detalle or {}, usuario=actor, usuario_nombre=nombre_usuario(actor), origen=origen_actual())
 
 def instantanea(servicio):
     return model_to_dict(servicio)
@@ -45,7 +47,10 @@ def renovar(servicio_id, datos):
 
 def destinatarios_actuales(administrador):
     # El administrador siempre recibe avisos; los contactos son adicionales.
-    contactos = {administrador.email.strip().casefold(): {"correo": administrador.email.strip().casefold(), "nombre": "Administrador"}}
+    contactos = {}
+    for admin in Usuario.objects.filter(is_active=True, is_superuser=True).order_by("pk"):
+        correo = admin.email.strip().casefold()
+        contactos[correo] = {"correo": correo, "nombre": admin.get_full_name() or admin.username}
     for contacto in DestinatarioAlerta.objects.filter(activo=True):
         correo = contacto.correo.strip().casefold()
         if correo not in contactos:
@@ -60,7 +65,9 @@ def enviar_alerta(servicio_id, tipo, hoy=None):
         valido = dias is not None and (dias < 45 if tipo == Alerta.Tipo.URGENTE else tipo in {"45", "30", "15"} and dias == int(tipo))
         if not valido:
             return "omitida"
-        administrador = Usuario.objects.get(pk=1, is_active=True)
+        administrador = Usuario.objects.filter(is_active=True, is_superuser=True).order_by("pk").first()
+        if administrador is None:
+            raise ValidationError("No hay administradores activos para recibir las alertas.")
         alerta, creada = Alerta.objects.get_or_create(servicio=servicio, ciclo=servicio.ciclo, tipo=tipo, defaults={"fecha": hoy, "destinatario": administrador.email})
         if not creada:
             return "omitida"
@@ -95,6 +102,7 @@ def enviar_alerta(servicio_id, tipo, hoy=None):
     alerta.respuesta = envios[0].respuesta if len(envios) == 1 else "\n".join(f"{e.correo}: {e.estado} · {e.respuesta}" for e in envios)[:4000]
     alerta.enviada = timezone.now() if alerta.estado == Alerta.Estado.ENVIADA else None
     alerta.save(update_fields=["estado", "respuesta", "enviada"])
+    auditar("PROCESAR_ALERTA", "Alerta", alerta.pk, {"estado": alerta.estado, "destinatarios": len(envios)})
     return {Alerta.Estado.ENVIADA: "enviada", Alerta.Estado.SIMULADA: "simulada", Alerta.Estado.PARCIAL: "parcial", Alerta.Estado.INCIERTA: "fallida"}[alerta.estado]
 
 def procesar_alertas(hoy=None):

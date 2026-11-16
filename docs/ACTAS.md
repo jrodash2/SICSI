@@ -28,13 +28,15 @@ El comando revisa y muestra recuentos sin escribir datos ni generar claves. No i
 ## 3. Aplicar
 
 ```powershell
-python manage.py importar_acta "$ruta" --aplicar
+python manage.py importar_acta "$ruta" --usuario TU_USUARIO --aplicar
 python manage.py runserver
 ```
 
 La carga es transaccional: si una fila no es válida, no quedan servicios o actas a medio cargar. Repetir el mismo archivo exacto no duplica registros ni sobrescribe ediciones locales, porque se verifica su SHA-256. Una copia modificada de Word puede tener otro hash aunque se vea igual: no la vuelvas a importar como si fuera el mismo archivo; revisa primero el inventario.
 
 No se modifican cuentas administrativas, contraseñas de plataformas ni permisos externos. Las frases del acta que piden cambiar una clave se conservan como información, no se ejecutan. Tampoco se envían correos durante la importación.
+
+En --usuario sustituye TU_USUARIO por el administrador que realiza la carga. Así quedan identificados el responsable del acta y de sus servicios. Si omites la opción, se registra como consola sin usuario indicado. Las actas íntegras solo se consultan con perfil Administrador.
 
 ## 4. Revisar desde la aplicación
 

@@ -1,6 +1,11 @@
 from django.urls import path
 from . import views
 urlpatterns = [
+    path("usuarios/", views.usuarios, name="usuarios"),
+    path("usuarios/nuevo/", views.usuario_form, name="usuario_crear"),
+    path("usuarios/<int:pk>/editar/", views.usuario_form, name="usuario_editar"),
+    path("usuarios/<int:pk>/estado/", views.usuario_estado, name="usuario_estado"),
+    path("usuarios/<int:pk>/clave/", views.usuario_password, name="usuario_password"),
     path("destinatarios/", views.destinatarios, name="destinatarios"),
     path("destinatarios/nuevo/", views.destinatario_form, name="destinatario_crear"),
     path("destinatarios/prueba-administrador/", views.probar_correo, name="correo_prueba_admin"),

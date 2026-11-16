@@ -28,15 +28,14 @@ class WebTests(TestCase):
         response = self.client.get(reverse("servicio_detalle", args=[self.servicio.pk]))
         self.assertContains(response, "&lt;script&gt;alert(1)&lt;/script&gt;")
         self.assertNotContains(response, "<script>alert(1)</script>")
-    def test_no_hay_registro_publico_ni_admin_multiusuario(self):
+    def test_no_hay_registro_publico_y_las_cuentas_nuevas_no_son_administradoras(self):
         anon = Client()
         self.assertEqual(anon.get(reverse("servicios")).status_code, 302)
         self.assertEqual(anon.get("/registro/").status_code, 404)
         self.assertEqual(anon.get("/admin/").status_code, 404)
-        with self.assertRaises(ValueError):
-            Usuario.objects.create_superuser(username="otro", email="otro@example.test", password="otra-test-password-2026")
-        with self.assertRaises(IntegrityError), transaction.atomic():
-            Usuario.objects.create(id=2, username="otro", email="otro@example.test", password="no-es-una-clave-real")
+        usuario = Usuario.objects.create_user(username="consulta_nueva", email="consulta-nueva@example.test", password="test-password-only-2026")
+        self.assertFalse(usuario.is_superuser)
+        self.assertFalse(usuario.puede_editar)
     def test_csrf_obligatorio_y_logout_solo_post(self):
         client = Client(enforce_csrf_checks=True)
         client.force_login(self.user)

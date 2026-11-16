@@ -40,7 +40,10 @@ def actualizar_configuracion(source, correo, clave):
     ast.parse(result)
     return result
 
-class Command(BaseCommand):
+from core.management.actor_command import ComandoConUsuario
+
+class Command(ComandoConUsuario):
+    registrar_finalizacion = True
     help = 'Configura Gmail en config/settings.py privado. Solicita la clave oculta y no envía correos.'
     requires_system_checks = []
     def add_arguments(self, parser):

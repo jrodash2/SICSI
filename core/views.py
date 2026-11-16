@@ -16,8 +16,9 @@ from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from . import auth
-from .forms import AccesoForm, DestinatarioForm, DocumentoForm, FiltrosForm, GestionForm, RenovacionForm, ServicioForm
-from .models import Alerta, Auditoria, DestinatarioAlerta, Documento, Gestion, Renovacion, Servicio, Tramite
+from .actor import contexto_usuario
+from .forms import AccesoForm, DestinatarioForm, DocumentoForm, FiltrosForm, GestionForm, RenovacionForm, ServicioForm, UsuarioForm
+from .models import Alerta, Auditoria, DestinatarioAlerta, Documento, Gestion, Renovacion, Servicio, Tramite, Usuario
 from .services import auditar, enviar_alerta, instantanea, registrar_gestion, renovar
 
 class AccesoView(LoginView):
@@ -32,17 +33,18 @@ class AccesoView(LoginView):
         return super().post(request, *args, **kwargs)
     def form_invalid(self, form):
         auth.fallo(self.request)
-        auditar("ACCESO_FALLIDO", "Usuario", 1)
+        auditar("ACCESO_FALLIDO", "Usuario")
         return super().form_invalid(form)
     def form_valid(self, form):
         auth.limpiar(self.request)
-        auditar("INICIAR_SESION", "Usuario", 1)
-        return super().form_valid(form)
+        with contexto_usuario(form.get_user(), "web"):
+            auditar("INICIAR_SESION", "Usuario", form.get_user().pk, usuario=form.get_user())
+            return super().form_valid(form)
 
 class SalirView(LogoutView):
     def post(self, request, *args, **kwargs):
         if request.user.is_authenticated:
-            auditar("CERRAR_SESION", "Usuario", 1)
+            auditar("CERRAR_SESION", "Usuario", request.user.pk)
         return super().post(request, *args, **kwargs)
 
 @method_decorator(login_required, name="dispatch")
@@ -51,7 +53,7 @@ class ContrasenaView(PasswordChangeView):
     success_url = reverse_lazy("password_change")
     def form_valid(self, form):
         response = super().form_valid(form)
-        auditar("CAMBIAR_CONTRASENA", "Usuario", 1)
+        auditar("CAMBIAR_CONTRASENA", "Usuario", self.request.user.pk)
         messages.success(self.request, "Contraseña actualizada. Las demás sesiones dejaron de tener acceso.")
         return response
 
@@ -117,7 +119,9 @@ def lista_servicios(request):
 @login_required
 def detalle_servicio(request, pk):
     servicio = get_object_or_404(Servicio, pk=pk)
-    return render(request, "core/detalle.html", {"servicio": servicio, "gestiones": servicio.gestiones.all(), "renovaciones": servicio.renovaciones.all(), "documentos": servicio.documentos.all(), "alertas": servicio.alertas.prefetch_related("envios").all(), "urgencia_registrada": servicio.alertas.filter(ciclo=servicio.ciclo, tipo=Alerta.Tipo.URGENTE).exists()})
+    relacionados = Q(entidad="Servicio", registro_id=pk) | Q(entidad="Gestion", registro_id__in=servicio.gestiones.values("pk")) | Q(entidad="Documento", registro_id__in=servicio.documentos.values("pk")) | Q(entidad="Alerta", registro_id__in=servicio.alertas.values("pk"))
+    historial = Paginator(Auditoria.objects.filter(relacionados), 25).get_page(request.GET.get("page"))
+    return render(request, "core/detalle.html", {"historial_acciones": historial, "servicio": servicio, "gestiones": servicio.gestiones.all(), "renovaciones": servicio.renovaciones.all(), "documentos": servicio.documentos.all(), "alertas": servicio.alertas.prefetch_related("envios").all(), "urgencia_registrada": servicio.alertas.filter(ciclo=servicio.ciclo, tipo=Alerta.Tipo.URGENTE).exists()})
 
 @login_required
 def crear_servicio(request):
@@ -224,6 +228,7 @@ def descargar_documento(request, pk):
         archivo = documento.archivo.open("rb")
     except FileNotFoundError:
         raise Http404("Documento no disponible.")
+    auditar("DESCARGAR_PDF", "Documento", documento.pk, {"servicio": documento.servicio_id})
     return FileResponse(archivo, as_attachment=True, filename=documento.nombre_original, content_type="application/pdf")
 
 @login_required
@@ -248,7 +253,7 @@ def lista_alertas(request):
 
 @login_required
 def lista_auditoria(request):
-    return render(request, "core/auditoria.html", {"pagina": Paginator(Auditoria.objects.all(), 25).get_page(request.GET.get("page"))})
+    return render(request, "core/auditoria.html", {"pagina": Paginator(Auditoria.objects.select_related("usuario").all(), 25).get_page(request.GET.get("page"))})
 
 @login_required
 def reportes(request):
@@ -305,7 +310,7 @@ def descargar_acta(request, pk):
 
 @login_required
 def destinatarios(request):
-    return render(request, "core/destinatarios.html", {"destinatarios": DestinatarioAlerta.objects.all(), "correo_administrador": request.user.email, "correo_remitente": settings.DEFAULT_FROM_EMAIL, "smtp_host": settings.EMAIL_HOST, "smtp_port": settings.EMAIL_PORT, "smtp_real": settings.EMAIL_MODE == "smtp", "activos": DestinatarioAlerta.objects.filter(activo=True).count()})
+    return render(request, "core/destinatarios.html", {"destinatarios": DestinatarioAlerta.objects.all(), "correo_administrador": request.user.email, "correos_administradores": ", ".join(Usuario.objects.filter(is_active=True, is_superuser=True).values_list("email", flat=True)), "cantidad_administradores": Usuario.objects.filter(is_active=True, is_superuser=True).count(), "correo_remitente": settings.DEFAULT_FROM_EMAIL, "smtp_host": settings.EMAIL_HOST, "smtp_port": settings.EMAIL_PORT, "smtp_real": settings.EMAIL_MODE == "smtp", "activos": DestinatarioAlerta.objects.filter(activo=True).count()})
 
 @login_required
 def destinatario_form(request, pk=None):
@@ -359,3 +364,75 @@ def probar_correo(request, pk=None):
         auditar("PROBAR_CORREO", "DestinatarioAlerta", item.pk if item else None, {"correo": correo, "estado": "Fallido o incierto", "respuesta": respuesta_segura(exc)})
         messages.error(request, "No se confirmó el correo de prueba. Revise la configuración SMTP y el detalle en Auditoría.")
     return redirect("destinatarios")
+
+
+def datos_usuario(usuario):
+    return {"username": usuario.username, "nombres": usuario.first_name, "apellidos": usuario.last_name, "email": usuario.email, "rol": usuario.perfil, "activo": usuario.is_active}
+
+@login_required
+def usuarios(request):
+    qs = Usuario.objects.all().order_by("username")
+    buscar = request.GET.get("buscar", "").strip()[:150]
+    if buscar:
+        qs = qs.filter(Q(username__icontains=buscar) | Q(first_name__icontains=buscar) | Q(last_name__icontains=buscar) | Q(email__icontains=buscar))
+    return render(request, "core/usuarios.html", {"pagina": Paginator(qs, 25).get_page(request.GET.get("page")), "buscar": buscar})
+
+@login_required
+def usuario_form(request, pk=None):
+    objetivo = get_object_or_404(Usuario, pk=pk) if pk else None
+    anterior = datos_usuario(objetivo) if objetivo else {}
+    form = UsuarioForm(request.POST or None, instance=objetivo)
+    if request.method == "POST" and form.is_valid():
+        try:
+            with transaction.atomic():
+                administradores = list(Usuario.objects.select_for_update().filter(is_superuser=True, is_active=True).order_by("pk"))
+                actual = Usuario.objects.select_for_update().get(pk=pk) if pk else None
+                conserva_admin = form.cleaned_data["rol"] == Usuario.Rol.ADMINISTRADOR and form.cleaned_data["is_active"]
+                if pk == request.user.pk and not conserva_admin:
+                    raise ValidationError("No puedes desactivar tu propia cuenta ni quitarte el perfil de administrador.")
+                if actual and actual.es_administrador and not conserva_admin and len(administradores) <= 1:
+                    raise ValidationError("Debe permanecer al menos un administrador activo.")
+                anterior = datos_usuario(actual) if actual else {}
+                nuevo = form.save()
+                auditar("EDITAR_USUARIO" if pk else "CREAR_USUARIO", "Usuario", nuevo.pk, {"anterior": anterior, "nuevo": datos_usuario(nuevo)})
+            messages.success(request, "Usuario guardado. Los permisos se aplican en la siguiente solicitud.")
+            return redirect("usuarios")
+        except ValidationError as exc:
+            form.add_error(None, exc)
+        except IntegrityError:
+            form.add_error(None, "El usuario o correo ya fue registrado. Revisa los datos.")
+    return render(request, "core/usuario_form.html", {"form": form, "objetivo": objetivo, "titulo": "Editar usuario" if pk else "Crear usuario"})
+
+@login_required
+@require_POST
+def usuario_estado(request, pk):
+    try:
+        with transaction.atomic():
+            administradores = list(Usuario.objects.select_for_update().filter(is_superuser=True, is_active=True).order_by("pk"))
+            objetivo = get_object_or_404(Usuario.objects.select_for_update(), pk=pk)
+            if objetivo.pk == request.user.pk:
+                raise ValidationError("No puedes desactivar tu propia cuenta.")
+            if objetivo.es_administrador and len(administradores) <= 1:
+                raise ValidationError("Debe permanecer al menos un administrador activo.")
+            objetivo.is_active = not objetivo.is_active
+            objetivo.save(update_fields=["is_active"])
+            auditar("ESTADO_USUARIO", "Usuario", pk, {"activo": objetivo.is_active})
+        messages.success(request, "Estado del usuario actualizado. Su historial se conserva.")
+    except ValidationError as exc:
+        messages.error(request, " ".join(exc.messages))
+    return redirect("usuarios")
+
+@login_required
+def usuario_password(request, pk):
+    from django.contrib.auth.forms import SetPasswordForm
+    objetivo = get_object_or_404(Usuario, pk=pk)
+    if objetivo.pk == request.user.pk:
+        return redirect("password_change")
+    form = SetPasswordForm(objetivo, request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        with transaction.atomic():
+            form.save()
+            auditar("RESTABLECER_CONTRASENA", "Usuario", pk, {"username": objetivo.username})
+        messages.success(request, "Contraseña restablecida. Las sesiones anteriores de ese usuario dejaron de tener acceso.")
+        return redirect("usuarios")
+    return render(request, "core/usuario_form.html", {"form": form, "objetivo": objetivo, "titulo": "Restablecer contraseña"})

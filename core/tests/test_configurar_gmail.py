@@ -5,7 +5,7 @@ import tempfile
 from unittest.mock import patch
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.test import SimpleTestCase, override_settings
+from django.test import TestCase, override_settings
 from core.management.commands.configurar_gmail import actualizar_configuracion
 
 SOURCE = '''SECRET_KEY = "clave-privada-de-prueba"
@@ -16,7 +16,7 @@ EMAIL_HOST_PASSWORD = ""
 PRIVATE_MEDIA_ROOT = "carpeta-privada"
 '''
 
-class ConfigurarGmailTests(SimpleTestCase):
+class ConfigurarGmailTests(TestCase):
     def test_preserva_base_secret_key_y_ruta_privada(self):
         result = actualizar_configuracion(SOURCE, 'cuenta@example.test', 'abcdefghijklmnop')
         tree = ast.parse(result)

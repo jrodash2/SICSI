@@ -44,7 +44,7 @@ Ninguna reserva se reintenta automáticamente, incluso tras fallos, para evitar 
 
 Los filtros aceptan servicio/código parcial; proveedor y categoría completos sin distinguir mayúsculas; estados; trámite y rango de vencimiento inclusivo. Renovaciones próximas abarca hoy a 45 días y respeta exclusiones. Gestiones pendientes incluye servicios con trámites sin cerrar, aun sin fecha. Exportaciones incluyen última gestión, expediente y seguimiento; Excel trata los textos como datos, no fórmulas.
 
-Seguridad permite cambiar contraseña y cierra las demás sesiones. Salir cierra la sesión actual. Hay límite persistente de 5 fallos por dirección observada por el servidor y 15 globales por 15 minutos. Las direcciones se transforman con HMAC; no se confía en X-Forwarded-For arbitrario. Detrás de un proxy puede aplicarse el límite por IP del proxy; confirma la configuración de red antes de ajustar este comportamiento.
+Seguridad permite cambiar contraseña y cierra las demás sesiones. Salir cierra la sesión actual. Hay límite persistente de 5 fallos por dirección observada por el servidor y 15 por nombre de usuario en cada ventana de 15 minutos. Las direcciones se transforman con HMAC; no se confía en X-Forwarded-For arbitrario. Detrás de un proxy puede aplicarse el límite por IP del proxy; confirma la configuración de red antes de ajustar este comportamiento.
 
 Auditoría conserva cambios de negocio, renovaciones, importaciones, exportaciones y accesos. No registra contraseñas ni hashes de autenticación. No reemplaza un registro externo inalterable: un operador con acceso directo a la base podría cambiar las tablas.
 
@@ -54,6 +54,10 @@ Actas de entrega conserva el DOCX original cifrado, la transcripción completa, 
 
 ## Destinatarios y correo
 
-Destinatarios permite administrar contactos adicionales, activarlos y desactivarlos y confirmar un envío de prueba. El administrador siempre recibe avisos. No se crean cuentas de acceso. Cada correo se deduplica y cada resultado se conserva aunque luego elimines el contacto. En Alertas abre Ver destinatarios y respuestas para revisar entregas parciales. La configuración Gmail se guarda solo en tu settings.py privado; consulta CORREOS.md para instalarla y probarla.
+Destinatarios permite administrar contactos adicionales, activarlos y desactivarlos y confirmar un envío de prueba. Los administradores activos reciben avisos. Los contactos de correo no se convierten en cuentas de acceso; las cuentas se gestionan en Usuarios. Cada correo se deduplica y cada resultado se conserva aunque luego elimines el contacto. En Alertas abre Ver destinatarios y respuestas para revisar entregas parciales. La configuración Gmail se guarda solo en tu settings.py privado; consulta CORREOS.md para instalarla y probarla.
 
 El nuevo resumen visual muestra renovaciones de los últimos seis meses y distribución real de vencimientos. Los ceros indican ausencia de actividad guardada, no datos de demostración.
+
+## Responsables y perfiles
+
+Los registros nuevos muestran el usuario que los creó y quién realizó sus cambios. Auditoría y el historial del servicio conservan la identidad registrada en cada acción. No se asignan autores a registros antiguos sin evidencia. Consulta USUARIOS.md para permisos, creación de cuentas, desactivación y operaciones por consola. Las actas completas con credenciales y la auditoría general son exclusivas de administradores.
