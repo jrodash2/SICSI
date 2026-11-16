@@ -22,7 +22,7 @@ Eliminar solo se permite sin historial, documentos, renovaciones ni alertas. Par
 
 Adjunta PDF desde el detalle y, opcionalmente, asócialo a una gestión del mismo servicio. Se comprueban extensión, MIME, cabecera, terminador y tamaño. Se almacenan con nombres aleatorios y se descargan únicamente con sesión.
 
-La comprobación de estructura no es un antivirus; usa documentos institucionales confiables y las herramientas de revisión de la institución. No subas archivos con credenciales. No expongas PRIVATE_MEDIA_ROOT como una carpeta web pública.
+La comprobación de estructura no es un antivirus; usa documentos institucionales confiables y las herramientas de revisión de la institución. Para conservar un acta íntegra con credenciales e identificación utiliza el módulo privado de actas y su comando de importación, documentado en ACTAS.md. No expongas PRIVATE_MEDIA_ROOT como una carpeta web pública.
 
 ## Dashboard y avisos
 
@@ -47,3 +47,7 @@ Los filtros aceptan servicio/código parcial; proveedor y categoría completos s
 Seguridad permite cambiar contraseña y cierra las demás sesiones. Salir cierra la sesión actual. Hay límite persistente de 5 fallos por dirección observada por el servidor y 15 globales por 15 minutos. Las direcciones se transforman con HMAC; no se confía en X-Forwarded-For arbitrario. Detrás de un proxy puede aplicarse el límite por IP del proxy; confirma la configuración de red antes de ajustar este comportamiento.
 
 Auditoría conserva cambios de negocio, renovaciones, importaciones, exportaciones y accesos. No registra contraseñas ni hashes de autenticación. No reemplaza un registro externo inalterable: un operador con acceso directo a la base podría cambiar las tablas.
+
+## Actas completas
+
+Actas de entrega conserva el DOCX original cifrado, la transcripción completa, los accesos y el catálogo con todas sus filas. La lectura y descarga exigen sesión y quedan auditadas. El contenido privado se muestra íntegro en la vista del acta, no se incorpora a exportaciones generales de servicios ni se publica en Git. Respalda también private_media/.acta.key: la base cifrada por sí sola no permite recuperar esos datos. Consulta ACTAS.md para importar desde tu PC.

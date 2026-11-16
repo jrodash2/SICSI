@@ -127,6 +127,7 @@ No repitas `createsuperuser`. Cuando incorpores actualizaciones, ejecuta `git pu
 - Alertas exactas de 45/30/15 días, urgencia inicial, reserva y clave única contra duplicados.
 - Reportes Excel/PDF, última gestión, expediente y siguiente seguimiento.
 - Auditoría, importador CSV y comando de respaldo PostgreSQL.
+- Actas DOCX completas: original cifrado, catálogo, accesos y transcripción privada sin suprimir contenido.
 
 ## Comandos útiles
 
@@ -138,6 +139,8 @@ python manage.py test
 python manage.py enviar_alertas --solo-revisar
 python manage.py enviar_alertas
 python manage.py importar_servicios data/servicios_plantilla.csv
+python manage.py importar_acta "C:/RUTA_PRIVADA/acta.docx"
+python manage.py importar_acta "C:/RUTA_PRIVADA/acta.docx" --aplicar
 python manage.py respaldar_bd
 ```
 
@@ -146,14 +149,17 @@ Las pruebas usan una base temporal `test_sicsi`. El usuario local necesita permi
 ## Documentación
 
 - [Uso y reglas del sistema](docs/USO.md).
-- [Importación de los servicios del acta](docs/IMPORTACION.md).
+- [Importación CSV de servicios](docs/IMPORTACION.md).
+- [Cargar el DOCX completo con catálogo y accesos](docs/ACTAS.md).
 - [SMTP, tareas programadas y producción](docs/DESPLIEGUE.md).
 - [Problemas comunes en tu PC](docs/SOLUCION_PROBLEMAS.md).
 - [Pruebas y límites de verificación](docs/VERIFICACION.md).
 
-## Datos pendientes
+## Importar el documento completo
 
-El acta del 11 de noviembre de 2026 no se proporcionó. Las plantillas están preparadas, pero los 12 servicios de páginas 5–6 y el catálogo de páginas 2–4 requieren transcripción y revisión. No inventes fechas, proveedores ni contactos. No importes el acta completa, contraseñas, credenciales administrativas ni números de identidad.
+El comando `importar_acta` lee tu DOCX local, incorpora los servicios, conserva todas las filas de catálogo y accesos y archiva el documento original completo con cifrado. En la interfaz aparece **Actas de entrega** para consultar todo el contenido, incluidas las secciones privadas, y descargar el original sin cambios.
+
+No se publican archivos reales, credenciales ni identidades en GitHub. No hay datos del acta dentro del código: debes ejecutar la carga en tu PC con tu documento. Consulta [la guía de actas](docs/ACTAS.md) antes de aplicar. La importación no envía correos y no sobrescribe servicios existentes.
 
 ## Producción
 

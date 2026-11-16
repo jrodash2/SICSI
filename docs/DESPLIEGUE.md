@@ -110,7 +110,7 @@ Crea un archivo .dump en formato personalizado, fuera de la web, con un archivo 
 30 2 * * * cd /home/USUARIO/SICSI && /home/USUARIO/venv/sicsi/bin/python manage.py respaldar_bd >> /home/USUARIO/logs/sicsi-respaldos.log 2>&1
 ```
 
-Respalda además los PDF privados y la configuración secreta mediante un mecanismo institucional cifrado. Conserva una copia externa y aplica una política de retención; este comando no elimina copias automáticamente. El respaldo de BD contiene contactos y sesiones y debe protegerse.
+Respalda además los PDF privados, la configuración secreta y la clave private_media/.acta.key (o ACTA_KEY_FILE) mediante un mecanismo institucional cifrado. El documento y sus secciones privadas están cifrados en la base; sin esa clave no podrán recuperarse después de restaurar. Conserva una copia externa y aplica una política de retención; este comando no elimina copias automáticamente. El respaldo de BD contiene contactos y sesiones y debe protegerse.
 
 Prueba restauración en una base aislada vacía:
 

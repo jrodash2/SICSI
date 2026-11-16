@@ -45,6 +45,7 @@ class Servicio(models.Model):
         ACTIVO = "Activo", "Activo"
         SUSPENDIDO = "Suspendido", "Suspendido"
         CANCELADO = "Cancelado", "Cancelado"
+    acta_origen = models.ForeignKey("ActaEntrega", on_delete=models.PROTECT, related_name="servicios", null=True, blank=True, editable=False)
     codigo = models.CharField("código", max_length=60, unique=True)
     nombre = models.CharField("nombre del servicio", max_length=255)
     categoria = models.CharField("categoría", max_length=255, blank=True)
@@ -171,3 +172,34 @@ class IntentoAcceso(models.Model):
     clave = models.CharField(max_length=64, unique=True)
     fallos = models.PositiveIntegerField(default=0)
     ventana = models.DateTimeField(default=timezone.now)
+
+
+class ActaEntrega(models.Model):
+    nombre_archivo = models.CharField(max_length=255)
+    sha256 = models.CharField(max_length=64, unique=True)
+    fecha_documento = models.DateField(null=True, blank=True)
+    resumen = models.JSONField(default=dict)
+    archivo_cifrado = models.BinaryField(editable=False)
+    contenido_cifrado = models.BinaryField(editable=False)
+    creado = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        ordering = ["-id"]
+    def __str__(self):
+        return self.nombre_archivo
+
+class ElementoActa(models.Model):
+    class Tipo(models.TextChoices):
+        CATALOGO = "catalogo", "Compra o licencia"
+        ACCESO = "acceso", "Acceso o plataforma"
+    acta = models.ForeignKey(ActaEntrega, on_delete=models.PROTECT, related_name="elementos")
+    tipo = models.CharField(max_length=15, choices=Tipo.choices)
+    orden = models.PositiveIntegerField()
+    nombre = models.CharField(max_length=255)
+    fecha_texto = models.CharField(max_length=255, blank=True)
+    fecha_referencia = models.DateField(null=True, blank=True)
+    requiere_validacion = models.BooleanField(default=False)
+    motivo_validacion = models.TextField(blank=True)
+    contenido_cifrado = models.BinaryField(editable=False)
+    class Meta:
+        ordering = ["orden"]
+        constraints = [models.UniqueConstraint(fields=["acta", "tipo", "orden"], name="elemento_acta_unico")]

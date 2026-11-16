@@ -1,6 +1,6 @@
 # Importación del acta
 
-No se suministró el acta. Los CSV de `data/` solo contienen encabezados.
+Los CSV de `data/` solo contienen encabezados. Este flujo importa únicamente campos del inventario. Para cargar el DOCX completo, incluidos catálogo, accesos y datos originales privados, usa [importar_acta](ACTAS.md); no hace falta transcribir el documento a CSV.
 
 ## Preparar los 12 servicios
 
@@ -27,7 +27,7 @@ Primero simula, revisa y luego aplica. En Windows también puedes usar rutas ent
 
 Se valida todo antes de escribir. La carga aplica una transacción completa, genera auditoría y rechaza códigos existentes, repetidos y columnas no admitidas. No hay sobrescrituras ni importación de PDF desde CSV; adjúntalos después por la interfaz.
 
-Revisa manualmente los campos de texto: una lista cerrada de columnas no puede identificar si una observación contiene una clave. Nunca incluyas contraseñas, accesos, credenciales administrativas, números de identidad ni el acta completa. Incluye únicamente los contactos de servicio pertinentes disponibles en la fuente.
+Revisa manualmente los campos de texto: una lista cerrada de columnas no puede identificar si una observación contiene una clave. No mezcles contraseñas, accesos, credenciales administrativas, números de identidad ni el acta completa en este CSV de servicios. El importador DOCX conserva esas secciones completas dentro de las actas privadas cifradas. Incluye únicamente los contactos de servicio pertinentes disponibles en la fuente.
 
 ## Catálogo adicional
 

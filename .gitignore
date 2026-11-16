@@ -24,3 +24,8 @@ Thumbs.db
 
 # Configuración Django privada (copiar desde settings_example.py)
 config/settings.py
+
+# Fuentes de importación y claves privadas
+private_imports/
+*.docx
+*.key

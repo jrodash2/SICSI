@@ -4,7 +4,7 @@ from urllib.parse import urlencode
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView, LogoutView, PasswordChangeView
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import OuterRef, ProtectedError, Q, Subquery
@@ -247,3 +247,38 @@ def exportar(request, formato):
     servicios = list(qs.prefetch_related("gestiones"))
     auditar("EXPORTAR", "Reporte", detalle={"formato": formato, "filtros": dict(request.GET.items()), "filas": len(servicios)})
     return generar_reporte(servicios, formato)
+
+
+@login_required
+def lista_actas(request):
+    from .models import ActaEntrega
+    return render(request, "core/actas.html", {"actas": ActaEntrega.objects.defer("archivo_cifrado", "contenido_cifrado")})
+
+@login_required
+def detalle_acta(request, pk):
+    from .actas_crypto import descifrar_json
+    from .models import ActaEntrega, ElementoActa
+    acta = get_object_or_404(ActaEntrega, pk=pk)
+    try:
+        contenido = descifrar_json(acta.contenido_cifrado)
+        catalogo = [{"registro": item, "celdas": descifrar_json(item.contenido_cifrado)["celdas_originales"]} for item in acta.elementos.filter(tipo=ElementoActa.Tipo.CATALOGO)]
+    except ImproperlyConfigured:
+        return render(request, "core/acta_error.html", status=503)
+    auditar("CONSULTAR_ACTA", "ActaEntrega", acta.pk)
+    return render(request, "core/acta_detalle.html", {"acta": acta, "contenido": contenido, "catalogo": catalogo, "servicios": acta.servicios.all()})
+
+@login_required
+def descargar_acta(request, pk):
+    from hashlib import sha256
+    from io import BytesIO
+    from .actas_crypto import descifrar_bytes
+    from .models import ActaEntrega
+    acta = get_object_or_404(ActaEntrega, pk=pk)
+    try:
+        data = descifrar_bytes(acta.archivo_cifrado)
+    except ImproperlyConfigured:
+        return render(request, "core/acta_error.html", status=503)
+    if sha256(data).hexdigest() != acta.sha256:
+        return render(request, "core/acta_error.html", status=503)
+    auditar("DESCARGAR_ACTA", "ActaEntrega", acta.pk)
+    return FileResponse(BytesIO(data), as_attachment=True, filename=acta.nombre_archivo, content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document")

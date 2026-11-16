@@ -13,3 +13,4 @@ pycparser==3.12
 reportlab==4.5.1
 sqlparse==0.6.1
 typing_extensions==4.16.0
+cryptography==48.0.1
