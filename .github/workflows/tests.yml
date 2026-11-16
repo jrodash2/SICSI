@@ -1,0 +1,40 @@
+name: Pruebas Django y PostgreSQL
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: sicsi
+          POSTGRES_PASSWORD: ci-test-only
+          POSTGRES_DB: sicsi
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sicsi -d sicsi"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      SECRET_KEY: clave-sintetica-exclusiva-de-pruebas-ci-no-usar-en-produccion-2026
+      DEBUG: "True"
+      ALLOWED_HOSTS: localhost,127.0.0.1,testserver
+      DB_NAME: sicsi
+      DB_USER: sicsi
+      DB_PASSWORD: ci-test-only
+      DB_HOST: 127.0.0.1
+      DB_PORT: "5432"
+      EMAIL_MODE: console
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-lock.txt
+      - run: python -m pip install -r requirements-lock.txt
+      - run: python manage.py check
+      - run: python manage.py makemigrations --check --dry-run
+      - run: python manage.py test

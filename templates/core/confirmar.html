@@ -1,0 +1,1 @@
+{% extends 'base.html' %}{% block content %}{% include 'core/encabezado.html' %}<section class="panel p-4 confirmation"><h2 class="fs-6">{{ servicio }}</h2><p>{{ texto }}</p><form method="post">{% csrf_token %}<button class="btn btn-danger">{{ boton }}</button><a class="btn btn-light" href="{% url 'servicio_detalle' servicio.pk %}">Cancelar</a></form></section>{% endblock %}
