@@ -1,22 +1,23 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 from urllib.parse import urlencode
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView, LogoutView, PasswordChangeView
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.core.paginator import Paginator
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import OuterRef, ProtectedError, Q, Subquery
 from django.http import FileResponse, Http404, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from . import auth
-from .forms import AccesoForm, DocumentoForm, FiltrosForm, GestionForm, RenovacionForm, ServicioForm
-from .models import Alerta, Auditoria, Documento, Gestion, Renovacion, Servicio, Tramite
+from .forms import AccesoForm, DestinatarioForm, DocumentoForm, FiltrosForm, GestionForm, RenovacionForm, ServicioForm
+from .models import Alerta, Auditoria, DestinatarioAlerta, Documento, Gestion, Renovacion, Servicio, Tramite
 from .services import auditar, enviar_alerta, instantanea, registrar_gestion, renovar
 
 class AccesoView(LoginView):
@@ -64,7 +65,25 @@ def dashboard(request):
     pendientes = sum(s.tramite not in [Tramite.RENOVADO, Tramite.CANCELADO] for s in todos)
     metricas = [("Total de servicios", len(todos), "Inventario institucional", ""), ("Vencidos", sum(d < 0 for _, d in calculables), "Sin renovación del ciclo vigente", "danger"), ("Vencen en 0–15 días", sum(0 <= d <= 15 for _, d in calculables), "Atención prioritaria", "danger"), ("Vencen en 16–30 días", sum(16 <= d <= 30 for _, d in calculables), "Planifique la renovación", ""), ("Vencen en 31–45 días", sum(31 <= d <= 45 for _, d in calculables), "Seguimiento preventivo", ""), ("Sin fecha confirmada", sum(s.periodicidad != Servicio.Periodicidad.PERMANENTE and (not s.fecha_vencimiento or s.requiere_validacion) for s in todos), "Fechas pendientes de revisión", ""), ("Gestiones pendientes", pendientes, "Trámites de servicios sin cierre", ""), ("Renovaciones completadas", Renovacion.objects.count(), "Historial de ciclos renovados", "")]
     proximos = sorted((s for s, _ in calculables), key=lambda s: s.fecha_vencimiento)[:20]
-    return render(request, "core/dashboard.html", {"metricas": metricas, "servicios": proximos})
+    from django.db.models import Count
+    from django.db.models.functions import TruncMonth
+    etiquetas = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+    hoy = timezone.localdate()
+    serial = hoy.year * 12 + hoy.month - 1
+    meses = [divmod(serial - i, 12) for i in range(5, -1, -1)]
+    inicio = timezone.make_aware(datetime(meses[0][0], meses[0][1] + 1, 1))
+    renovaciones_mes = {(item["mes"].year, item["mes"].month): item["total"] for item in Renovacion.objects.filter(creado__gte=inicio).annotate(mes=TruncMonth("creado")).values("mes").annotate(total=Count("id"))}
+    maximo = max([renovaciones_mes.get((a, m + 1), 0) for a, m in meses] + [1])
+    barras = [{"mes": etiquetas[m], "anio": a, "total": renovaciones_mes.get((a, m + 1), 0), "alto": round(renovaciones_mes.get((a, m + 1), 0) / maximo * 100)} for a, m in meses]
+    grupos = [("Vencidos", sum(d < 0 for _, d in calculables), "#ef6479"), ("0–15 días", sum(0 <= d <= 15 for _, d in calculables), "#f6ad55"), ("16–30 días", sum(16 <= d <= 30 for _, d in calculables), "#5d8dee"), ("31–45 días", sum(31 <= d <= 45 for _, d in calculables), "#88c9dd"), ("Más de 45 días", sum(d > 45 for _, d in calculables), "#63ba9e")]
+    segmentos = []
+    acumulado = 0
+    for nombre, cantidad, color in grupos:
+        porcentaje = cantidad / len(calculables) * 100 if calculables else 0
+        segmentos.append({"nombre": nombre, "cantidad": cantidad, "color": color, "porcentaje": round(porcentaje, 2), "offset": round(-acumulado, 2)})
+        acumulado += porcentaje
+    seguimientos = Gestion.objects.filter(pk=Subquery(Gestion.objects.filter(servicio=OuterRef("servicio_id")).order_by("-id").values("pk")[:1])).exclude(servicio__tramite__in=[Tramite.RENOVADO, Tramite.CANCELADO]).filter(proximo_seguimiento__isnull=False).select_related("servicio").order_by("proximo_seguimiento")[:4]
+    return render(request, "core/dashboard.html", {"metricas": metricas, "servicios": proximos[:6], "segmentos": segmentos, "calculables": len(calculables), "barras": barras, "seguimientos": seguimientos, "actividad": Auditoria.objects.exclude(accion__in=["ACCESO_FALLIDO", "CONSULTAR_ACTA"])[:5], "pendientes": pendientes})
 
 def servicios_filtrados(params):
     form = FiltrosForm(params or None)
@@ -98,7 +117,7 @@ def lista_servicios(request):
 @login_required
 def detalle_servicio(request, pk):
     servicio = get_object_or_404(Servicio, pk=pk)
-    return render(request, "core/detalle.html", {"servicio": servicio, "gestiones": servicio.gestiones.all(), "renovaciones": servicio.renovaciones.all(), "documentos": servicio.documentos.all(), "alertas": servicio.alertas.all(), "urgencia_registrada": servicio.alertas.filter(ciclo=servicio.ciclo, tipo=Alerta.Tipo.URGENTE).exists()})
+    return render(request, "core/detalle.html", {"servicio": servicio, "gestiones": servicio.gestiones.all(), "renovaciones": servicio.renovaciones.all(), "documentos": servicio.documentos.all(), "alertas": servicio.alertas.prefetch_related("envios").all(), "urgencia_registrada": servicio.alertas.filter(ciclo=servicio.ciclo, tipo=Alerta.Tipo.URGENTE).exists()})
 
 @login_required
 def crear_servicio(request):
@@ -213,8 +232,8 @@ def alerta_urgente(request, pk):
     get_object_or_404(Servicio, pk=pk)
     resultado = enviar_alerta(pk, Alerta.Tipo.URGENTE)
     auditar("ALERTA_URGENTE", "Servicio", pk, {"resultado": resultado})
-    textos = {"enviada": "Aviso aceptado por el servidor SMTP.", "simulada": "Aviso simulado. EMAIL_MODE=console: no se envió correo real.", "omitida": "Ya existe un aviso de urgencia de este ciclo o el servicio no cumple las condiciones.", "fallida": "Envío fallido o incierto. Revise Alertas antes de intervenir."}
-    (messages.error if resultado == "fallida" else messages.info)(request, textos[resultado])
+    textos = {"enviada": "Aviso aceptado por el servidor SMTP.", "simulada": "Aviso simulado. EMAIL_MODE=console: no se envió correo real.", "omitida": "Ya existe un aviso de urgencia de este ciclo o el servicio no cumple las condiciones.", "fallida": "Envío fallido o incierto. Revise Alertas antes de intervenir.", "parcial": "Algunos destinatarios no recibieron confirmación. Revise el detalle de la alerta."}
+    (messages.error if resultado in {"fallida", "parcial"} else messages.info)(request, textos[resultado])
     return redirect("servicio_detalle", pk=pk)
 
 @login_required
@@ -225,7 +244,7 @@ def lista_gestiones(request):
 
 @login_required
 def lista_alertas(request):
-    return render(request, "core/alertas.html", {"pagina": Paginator(Alerta.objects.select_related("servicio"), 25).get_page(request.GET.get("page"))})
+    return render(request, "core/alertas.html", {"pagina": Paginator(Alerta.objects.select_related("servicio").prefetch_related("envios"), 25).get_page(request.GET.get("page"))})
 
 @login_required
 def lista_auditoria(request):
@@ -282,3 +301,61 @@ def descargar_acta(request, pk):
         return render(request, "core/acta_error.html", status=503)
     auditar("DESCARGAR_ACTA", "ActaEntrega", acta.pk)
     return FileResponse(BytesIO(data), as_attachment=True, filename=acta.nombre_archivo, content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+
+
+@login_required
+def destinatarios(request):
+    return render(request, "core/destinatarios.html", {"destinatarios": DestinatarioAlerta.objects.all(), "correo_administrador": request.user.email, "correo_remitente": settings.DEFAULT_FROM_EMAIL, "smtp_host": settings.EMAIL_HOST, "smtp_port": settings.EMAIL_PORT, "smtp_real": settings.EMAIL_MODE == "smtp", "activos": DestinatarioAlerta.objects.filter(activo=True).count()})
+
+@login_required
+def destinatario_form(request, pk=None):
+    item = get_object_or_404(DestinatarioAlerta, pk=pk) if pk is not None else None
+    anterior = {"nombre": item.nombre, "correo": item.correo, "activo": item.activo} if item else {}
+    form = DestinatarioForm(request.POST or None, instance=item)
+    if request.method == "POST" and form.is_valid():
+        try:
+            with transaction.atomic():
+                registro = form.save()
+                auditar("EDITAR_DESTINATARIO" if pk else "CREAR_DESTINATARIO", "DestinatarioAlerta", registro.pk, {"anterior": anterior, "nuevo": {k: form.cleaned_data[k] for k in form.Meta.fields}})
+            messages.success(request, "Destinatario guardado. Se aplicará a los próximos avisos.")
+            return redirect("destinatarios")
+        except IntegrityError:
+            form.add_error("correo", "Este correo ya está registrado.")
+    return render(request, "core/destinatario_form.html", {"form": form, "titulo": "Editar destinatario" if pk else "Añadir destinatario"})
+
+@login_required
+@require_POST
+def destinatario_estado(request, pk):
+    with transaction.atomic():
+        item = get_object_or_404(DestinatarioAlerta.objects.select_for_update(), pk=pk)
+        item.activo = not item.activo
+        item.save(update_fields=["activo", "actualizado"])
+        auditar("ESTADO_DESTINATARIO", "DestinatarioAlerta", item.pk, {"activo": item.activo})
+    messages.success(request, "Estado actualizado para los próximos avisos.")
+    return redirect("destinatarios")
+
+@login_required
+@require_POST
+def destinatario_eliminar(request, pk):
+    with transaction.atomic():
+        item = get_object_or_404(DestinatarioAlerta, pk=pk)
+        auditar("ELIMINAR_DESTINATARIO", "DestinatarioAlerta", item.pk, {"nombre": item.nombre, "correo": item.correo})
+        item.delete()
+    messages.success(request, "Destinatario eliminado. Se conserva el historial de envíos anteriores.")
+    return redirect("destinatarios")
+
+@login_required
+@require_POST
+def probar_correo(request, pk=None):
+    from .mail import entregar, respuesta_segura
+    item = get_object_or_404(DestinatarioAlerta, pk=pk, activo=True) if pk is not None else None
+    correo = item.correo if item else request.user.email
+    # Solo se envía cuando el administrador confirma el botón de prueba.
+    try:
+        estado, respuesta = entregar("SICSI · Prueba de notificaciones", "Este mensaje verifica el envío de correo de SICSI, Sección de Informática – UPCV. No corresponde a un vencimiento ni contiene datos del acta.", correo)
+        auditar("PROBAR_CORREO", "DestinatarioAlerta", item.pk if item else None, {"correo": correo, "estado": estado, "respuesta": respuesta[:4000]})
+        messages.success(request, "Correo de prueba aceptado por SMTP. Compruebe la bandeja del destinatario.") if estado == Alerta.Estado.ENVIADA else messages.warning(request, "Prueba simulada: EMAIL_MODE está en console y no se envió correo real.")
+    except Exception as exc:
+        auditar("PROBAR_CORREO", "DestinatarioAlerta", item.pk if item else None, {"correo": correo, "estado": "Fallido o incierto", "respuesta": respuesta_segura(exc)})
+        messages.error(request, "No se confirmó el correo de prueba. Revise la configuración SMTP y el detalle en Auditoría.")
+    return redirect("destinatarios")

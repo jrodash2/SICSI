@@ -119,6 +119,7 @@ No repitas `createsuperuser`. Cuando incorpores actualizaciones, ejecuta `git pu
 ## Módulos incluidos
 
 - Acceso, cierre por POST, CSRF, límites de intentos persistentes y cambio de contraseña.
+- Vista de destinatarios adicionales, pruebas de correo y resultado SMTP individual por contacto.
 - Dashboard con ocho indicadores y próximos vencimientos.
 - CRUD de servicios con filtros y validación de fechas.
 - Bitácora de gestiones y estados sin borrar hechos anteriores.
@@ -135,6 +136,7 @@ Ejemplos con el entorno activado; si no lo activas, sustituye `python` por ` .\.
 
 ```text
 python manage.py check
+python manage.py configurar_gmail --correo TU_CUENTA
 python manage.py test
 python manage.py enviar_alertas --solo-revisar
 python manage.py enviar_alertas
@@ -151,6 +153,7 @@ Las pruebas usan una base temporal `test_sicsi`. El usuario local necesita permi
 - [Uso y reglas del sistema](docs/USO.md).
 - [Importación CSV de servicios](docs/IMPORTACION.md).
 - [Cargar el DOCX completo con catálogo y accesos](docs/ACTAS.md).
+- [Configurar Gmail y administrar destinatarios](docs/CORREOS.md).
 - [SMTP, tareas programadas y producción](docs/DESPLIEGUE.md).
 - [Problemas comunes en tu PC](docs/SOLUCION_PROBLEMAS.md).
 - [Pruebas y límites de verificación](docs/VERIFICACION.md).

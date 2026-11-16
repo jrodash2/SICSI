@@ -51,3 +51,9 @@ Auditoría conserva cambios de negocio, renovaciones, importaciones, exportacion
 ## Actas completas
 
 Actas de entrega conserva el DOCX original cifrado, la transcripción completa, los accesos y el catálogo con todas sus filas. La lectura y descarga exigen sesión y quedan auditadas. El contenido privado se muestra íntegro en la vista del acta, no se incorpora a exportaciones generales de servicios ni se publica en Git. Respalda también private_media/.acta.key: la base cifrada por sí sola no permite recuperar esos datos. Consulta ACTAS.md para importar desde tu PC.
+
+## Destinatarios y correo
+
+Destinatarios permite administrar contactos adicionales, activarlos y desactivarlos y confirmar un envío de prueba. El administrador siempre recibe avisos. No se crean cuentas de acceso. Cada correo se deduplica y cada resultado se conserva aunque luego elimines el contacto. En Alertas abre Ver destinatarios y respuestas para revisar entregas parciales. La configuración Gmail se guarda solo en tu settings.py privado; consulta CORREOS.md para instalarla y probarla.
+
+El nuevo resumen visual muestra renovaciones de los últimos seis meses y distribución real de vencimientos. Los ceros indican ausencia de actividad guardada, no datos de demostración.

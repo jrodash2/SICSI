@@ -2,7 +2,7 @@ from django import forms
 from django.conf import settings
 from django.contrib.auth.forms import AuthenticationForm
 from django.core.exceptions import ValidationError
-from .models import Documento, Gestion, Servicio
+from .models import DestinatarioAlerta, Documento, Gestion, Servicio
 
 class EstiloFormulario:
     def estilizar(self):
@@ -95,3 +95,20 @@ class FiltrosForm(EstiloFormulario, forms.Form):
         if data.get("desde") and data.get("hasta") and data["desde"] > data["hasta"]:
             raise ValidationError("La fecha inicial debe ser anterior o igual a la final.")
         return data
+
+
+class DestinatarioForm(EstiloFormulario, forms.ModelForm):
+    class Meta:
+        model = DestinatarioAlerta
+        fields = ["nombre", "correo", "activo"]
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.estilizar()
+    def clean_correo(self):
+        correo = self.cleaned_data["correo"].strip().casefold()
+        qs = DestinatarioAlerta.objects.filter(correo__iexact=correo)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise ValidationError("Este correo ya está registrado. Edítelo o actívelo desde la lista.")
+        return correo

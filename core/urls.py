@@ -1,6 +1,13 @@
 from django.urls import path
 from . import views
 urlpatterns = [
+    path("destinatarios/", views.destinatarios, name="destinatarios"),
+    path("destinatarios/nuevo/", views.destinatario_form, name="destinatario_crear"),
+    path("destinatarios/prueba-administrador/", views.probar_correo, name="correo_prueba_admin"),
+    path("destinatarios/<int:pk>/editar/", views.destinatario_form, name="destinatario_editar"),
+    path("destinatarios/<int:pk>/estado/", views.destinatario_estado, name="destinatario_estado"),
+    path("destinatarios/<int:pk>/eliminar/", views.destinatario_eliminar, name="destinatario_eliminar"),
+    path("destinatarios/<int:pk>/prueba/", views.probar_correo, name="correo_prueba"),
     path("actas/", views.lista_actas, name="actas"),
     path("actas/<int:pk>/", views.detalle_acta, name="acta_detalle"),
     path("actas/<int:pk>/original/", views.descargar_acta, name="acta_descargar"),

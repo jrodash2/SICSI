@@ -145,6 +145,7 @@ class Alerta(models.Model):
         ENVIADA = "Enviada", "Enviada (aceptada por SMTP)"
         INCIERTA = "Fallida o incierta", "Fallida o incierta"
         SIMULADA = "Simulada", "Simulada (sin SMTP)"
+        PARCIAL = "Parcial", "Parcial (revisar destinatarios)"
     servicio = models.ForeignKey(Servicio, on_delete=models.PROTECT, related_name="alertas")
     ciclo = models.PositiveIntegerField()
     tipo = models.CharField(max_length=10, choices=Tipo.choices)
@@ -203,3 +204,28 @@ class ElementoActa(models.Model):
     class Meta:
         ordering = ["orden"]
         constraints = [models.UniqueConstraint(fields=["acta", "tipo", "orden"], name="elemento_acta_unico")]
+
+
+class DestinatarioAlerta(models.Model):
+    nombre = models.CharField("nombre o área", max_length=150, blank=True)
+    correo = models.EmailField("correo electrónico")
+    activo = models.BooleanField("recibir notificaciones", default=True)
+    creado = models.DateTimeField(auto_now_add=True)
+    actualizado = models.DateTimeField(auto_now=True)
+    class Meta:
+        ordering = ["-activo", "correo"]
+        constraints = [models.UniqueConstraint(models.functions.Lower("correo"), name="correo_destinatario_unico")]
+    def __str__(self):
+        return self.nombre or self.correo
+
+class EnvioAlerta(models.Model):
+    alerta = models.ForeignKey(Alerta, on_delete=models.PROTECT, related_name="envios")
+    correo = models.EmailField()
+    nombre = models.CharField(max_length=150, blank=True)
+    estado = models.CharField(max_length=25, choices=Alerta.Estado.choices, default=Alerta.Estado.RESERVADA)
+    respuesta = models.TextField(blank=True)
+    intentada = models.DateTimeField(null=True, blank=True)
+    enviada = models.DateTimeField(null=True, blank=True)
+    class Meta:
+        ordering = ["id"]
+        constraints = [models.UniqueConstraint(fields=["alerta", "correo"], name="envio_unico_por_destinatario")]

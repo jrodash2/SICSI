@@ -28,7 +28,7 @@ class SMTPTests(SimpleTestCase):
             thread = threading.Thread(target=server.serve_forever, daemon=True)
             thread.start()
             try:
-                with override_settings(EMAIL_MODE="smtp", EMAIL_HOST="127.0.0.1", EMAIL_PORT=server.server_address[1], EMAIL_USE_TLS=False, EMAIL_USE_SSL=False, EMAIL_HOST_USER="", EMAIL_HOST_PASSWORD="", DEFAULT_FROM_EMAIL="sicsi@example.test"):
+                with override_settings(EMAIL_MODE="smtp", EMAIL_BACKEND="core.email_backend.CustomEmailBackend", EMAIL_HOST="127.0.0.1", EMAIL_PORT=server.server_address[1], EMAIL_USE_TLS=False, EMAIL_USE_SSL=False, EMAIL_HOST_USER="", EMAIL_HOST_PASSWORD="", DEFAULT_FROM_EMAIL="sicsi@example.test"):
                     estado, respuesta = entregar("Prueba local", "Mensaje sin datos reales", "admin@example.test")
                 self.assertEqual(estado, "Enviada")
                 self.assertEqual(respuesta, "250 queued as test-001")

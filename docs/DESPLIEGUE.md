@@ -55,6 +55,7 @@ En el mismo `config/settings.py`:
 
 ```python
 EMAIL_MODE = "smtp"
+EMAIL_BACKEND = "core.email_backend.CustomEmailBackend"
 EMAIL_HOST = "HOST_SMTP"
 EMAIL_PORT = 587
 EMAIL_HOST_USER = "CUENTA_SMTP"
@@ -69,6 +70,8 @@ Para puerto 465 usa EMAIL_USE_SSL = True y EMAIL_USE_TLS = False. No actives los
 Prueba con un servicio de prueba con menos de 45 días y Notificar urgencia. Comprueba bandeja y registros SMTP. La respuesta DATA queda registrada junto con fecha, tipo, destinatario, servicio y ciclo. Un 250 significa aceptación del proveedor, no entrega final.
 
 En modo consola se generan registros Simulada y no se marcan como Enviada. Cambiar luego a SMTP no libera esas reservas. Para probar envío real usa un servicio de prueba distinto y evita contaminar el inventario real.
+
+Para Gmail y gestión de contactos adicionales consulta [CORREOS.md](CORREOS.md). Cada destinatario tiene su propio resultado y una falla parcial se registra sin repetir los envíos exitosos.
 
 ## Cron diario independiente de la web
 

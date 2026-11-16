@@ -84,15 +84,15 @@ APP_URL = "http://127.0.0.1:8000".rstrip("/")
 EMAIL_MODE = "console"  # "smtp" para enviar correos reales.
 if not DEBUG and EMAIL_MODE != "smtp":
     raise ImproperlyConfigured("En producción EMAIL_MODE debe ser smtp.")
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend" if EMAIL_MODE == "smtp" else "django.core.mail.backends.console.EmailBackend"
-EMAIL_HOST = ""
+EMAIL_BACKEND = "core.email_backend.CustomEmailBackend" if EMAIL_MODE == "smtp" else "django.core.mail.backends.console.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
 EMAIL_HOST_USER = ""
 EMAIL_HOST_PASSWORD = ""
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
 EMAIL_TIMEOUT = 30
-DEFAULT_FROM_EMAIL = ""
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 if EMAIL_USE_SSL and EMAIL_USE_TLS:
     raise ImproperlyConfigured("EMAIL_USE_TLS y EMAIL_USE_SSL no pueden estar activos a la vez.")
 BACKUP_DIR = BASE_DIR / "backups"

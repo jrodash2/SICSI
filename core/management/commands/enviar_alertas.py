@@ -20,5 +20,5 @@ class Command(BaseCommand):
             return
         resultado = procesar_alertas(hoy)
         self.stdout.write(json.dumps({"fecha": str(hoy), "zona": "America/Guatemala", **resultado}, ensure_ascii=False))
-        if resultado["fallida"]:
+        if resultado["fallida"] or resultado["parcial"]:
             raise CommandError("Hay envíos fallidos o inciertos. Revise el registro de alertas; no se reintentan automáticamente.")
